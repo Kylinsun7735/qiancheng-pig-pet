@@ -226,15 +226,93 @@ const MOODS = [
   "心情超级棒！","想被摸摸头",
 ];
 
+/* ========== 真实语音片段库 ========== */
+const VOICE_BANK = {
+  short: [
+    {start:4.92,end:6.18,dur:1.26},{start:13.83,end:14.7,dur:0.87},
+    {start:15.24,end:15.9,dur:0.66},{start:28.92,end:30.12,dur:1.2},
+    {start:34.74,end:35.97,dur:1.23},{start:38.94,end:40.08,dur:1.14},
+    {start:41.46,end:42.87,dur:1.41},{start:53.67,end:54.69,dur:1.02},
+    {start:58.14,end:58.77,dur:0.63},{start:69.81,end:70.59,dur:0.78}
+  ],
+  medium: [
+    {start:6.57,end:8.4,dur:1.83},{start:9.0,end:11.13,dur:2.13},
+    {start:11.55,end:13.53,dur:1.98},{start:16.68,end:19.47,dur:2.79},
+    {start:20.01,end:22.56,dur:2.55},{start:23.43,end:25.29,dur:1.86},
+    {start:26.55,end:28.32,dur:1.77},{start:30.39,end:32.34,dur:1.95},
+    {start:32.73,end:34.41,dur:1.68},{start:36.78,end:38.7,dur:1.92},
+    {start:48.57,end:50.67,dur:2.1},{start:51.24,end:52.77,dur:1.53},
+    {start:55.86,end:57.9,dur:2.04}
+  ],
+  long: [
+    {start:1.14,end:4.14,dur:3.0},{start:43.74,end:47.7,dur:3.96},
+    {start:59.7,end:63.03,dur:3.33},{start:63.96,end:68.85,dur:4.89}
+  ]
+};
+
 /* ========== 状态 ========== */
-let happiness = 7;          // 心情值 0-10
+let happiness = 7;
 let bubbleTimer = null;
 let autoTimer = null;
 let blinkTimer = null;
 let lastTap = 0;
+let voiceAudio = null;      // HTML5 Audio 对象
+let voiceReady = false;     // 音频是否加载好
+let currentPlayTimer = null;
 
 function rand(x){ return x[Math.floor(Math.random()*x.length)] }
 function vibrate(ms){ try{ navigator.vibrate(ms); }catch(e){} }
+
+/* ========== 智能语音系统 ========== */
+function initVoice(){
+  voiceAudio = new Audio('voice.mp3');
+  voiceAudio.preload = 'auto';
+  voiceAudio.addEventListener('canplaythrough', ()=>{ voiceReady = true; });
+  voiceAudio.load();
+}
+
+// 随机选片段并播放
+function playVoice(category){
+  if(!voiceAudio) return false;
+  const pool = VOICE_BANK[category] || VOICE_BANK.medium;
+  const seg = rand(pool);
+
+  // 如果音频还没加载好，返回 false 让调用方 fallback
+  if(!voiceReady) return false;
+
+  try {
+    // 停止之前的播放
+    if(currentPlayTimer){ clearTimeout(currentPlayTimer); currentPlayTimer = null; }
+    voiceAudio.pause();
+
+    // 从片段起点播放
+    voiceAudio.currentTime = seg.start;
+    voiceAudio.volume = 1.0;
+    voiceAudio.play().catch(()=>{});
+
+    // 到片段终点自动停
+    currentPlayTimer = setTimeout(()=>{
+      voiceAudio.pause();
+    }, seg.dur * 1000 + 80);
+
+    return true;
+  } catch(e){ return false; }
+}
+
+// 智能说话：优先真实语音，没加载好就 fallback 机器音
+function smartSpeak(category, fallbackText){
+  const played = playVoice(category);
+  if(!played && fallbackText){
+    // fallback 到 Web Speech API
+    try{
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(fallbackText);
+      u.lang = 'zh-CN'; u.rate = 1.1; u.pitch = 1.1; u.volume = 0.9;
+      window.speechSynthesis.speak(u);
+    }catch(e){}
+  }
+  return played;
+}
 
 /* ========== 星空 ========== */
 (function(){
@@ -475,7 +553,7 @@ function say(){
   showBubble(text);
   petWrap.classList.add('happy');
   clearAnim('happy');
-  speak(text);
+  smartSpeak('medium', text);
   addHappiness(1);
   vibrate(10);
   spawnParticles(3, '✨');
@@ -486,7 +564,7 @@ function pat(){
   showBubble(text);
   petWrap.classList.add('happy');
   clearAnim('happy');
-  speak(text);
+  smartSpeak('short', text);
   addHappiness(1);
   vibrate(12);
   spawnParticles(3, '💖');
@@ -495,7 +573,7 @@ function pat(){
 function play(){
   showBubble("一波流！冲！");
   jump();
-  speak("一波流冲");
+  smartSpeak('long', "一波流冲");
   addHappiness(2);
   vibrate(20);
   spawnParticles(5, '⚡');
@@ -506,7 +584,7 @@ function feed(){
   showBubble(text);
   petWrap.classList.add('happy');
   clearAnim('happy');
-  speak(text);
+  smartSpeak('medium', text);
   addHappiness(2);
   vibrate(15);
   spawnParticles(4, '🍎');
@@ -526,7 +604,7 @@ function pickup(){
   // 举高高
   showBubble(rand(PICKUP_REACT));
   petWrap.classList.add('held');
-  speak("哇飞起来啦");
+  smartSpeak('long', "哇飞起来啦");
   vibrate([20,30,20]);
   spawnParticles(5, '💫');
   setTimeout(()=>petWrap.classList.remove('held'), 600);
@@ -606,10 +684,11 @@ function autoAction(){
   const r = Math.random();
   if(r < 0.25){
     // 自己说句话
-    showBubble(rand(QUOTES));
+    const q = rand(QUOTES);
+    showBubble(q);
     petWrap.classList.add('happy');
     clearAnim('happy');
-    speak(rand(QUOTES));
+    smartSpeak('medium', q);
   } else if(r < 0.5){
     // 抖一下
     shake();
@@ -625,20 +704,6 @@ function blink(){
   setTimeout(()=>petWrap.classList.remove('blink'), 250);
 }
 
-/* ========== 语音 ========== */
-function speak(text){
-  if(!window.speechSynthesis) return;
-  try{
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'zh-CN';
-    u.rate = 1.1;
-    u.pitch = 1.1;
-    u.volume = 0.9;
-    window.speechSynthesis.speak(u);
-  }catch(e){}
-}
-
 /* ========== 持久化 ========== */
 function saveState(){
   try{ localStorage.setItem('pigPet', JSON.stringify({ happiness })); }catch(e){}
@@ -652,6 +717,7 @@ function loadState(){
 
 /* ========== 初始化 ========== */
 function init(){
+  initVoice();
   loadState();
   recalcBase();
   addHappiness(0);  // 渲染 hearts
