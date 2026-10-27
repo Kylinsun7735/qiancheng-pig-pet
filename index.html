@@ -10,246 +10,687 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0f1221">
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-180.png">
 <title>小钎猪 · 钎城桌宠</title>
 <style>
-* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none; }
-html, body { width:100%; height:100%; overflow:hidden; position:fixed; }
-body {
-  background: linear-gradient(180deg, #0f1221 0%, #1a1f3a 50%, #0d1030 100%);
-  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
-  color: #fff;
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;}
+html,body{width:100%;height:100%;overflow:hidden;position:fixed;touch-action:none;}
+body{
+  background:linear-gradient(180deg,#0f1221 0%,#1a1f3a 50%,#0d1030 100%);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  color:#fff;
 }
 
-/* ===== 星空背景 ===== */
-.stars { position:fixed; inset:0; pointer-events:none; z-index:0; }
-.star {
-  position:absolute; width:2px; height:2px; background:rgba(255,255,255,0.85);
-  border-radius:50%; animation: twinkle 3s ease-in-out infinite;
-}
-@keyframes twinkle { 0%,100%{opacity:0.2} 50%{opacity:1} }
+/* ===== 星空 ===== */
+.stars{position:fixed;inset:0;pointer-events:none;z-index:0;}
+.star{position:absolute;width:2px;height:2px;background:rgba(255,255,255,0.85);border-radius:50%;animation:twinkle 3s ease-in-out infinite;}
+@keyframes twinkle{0%,100%{opacity:0.2}50%{opacity:1}}
+
+/* ===== 草地 ===== */
+.ground{position:fixed;bottom:0;left:0;right:0;height:18%;
+  background:linear-gradient(180deg,transparent 0%,rgba(30,40,80,0.4) 40%,rgba(20,25,55,0.7) 100%);
+  pointer-events:none;z-index:2;}
 
 /* ===== 状态栏 ===== */
-.status {
-  position:fixed; top: env(safe-area-inset-top, 0); left:0; right:0; z-index:20;
-  padding: 14px 18px 8px;
-  background: linear-gradient(180deg, rgba(15,18,33,0.9) 0%, transparent 100%);
-}
-.name-row { display:flex; justify-content:space-between; align-items:center; }
-.name { font-size:17px; font-weight:800; letter-spacing:0.5px; }
-.sub { font-size:11px; opacity:0.55; font-weight:500; margin-left:4px; }
-.mood { font-size:12px; opacity:0.7; margin-top:4px; }
+.status{position:fixed;top:env(safe-area-inset-top,0);left:0;right:0;z-index:20;
+  padding:14px 18px 8px;
+  background:linear-gradient(180deg,rgba(15,18,33,0.9) 0%,transparent 100%);}
+.name-row{display:flex;justify-content:space-between;align-items:center;}
+.name{font-size:17px;font-weight:800;letter-spacing:0.5px;}
+.sub{font-size:11px;opacity:0.55;font-weight:500;margin-left:4px;}
+.mood{font-size:12px;opacity:0.7;margin-top:4px;transition:opacity 0.3s;}
+.heart-bar{display:flex;gap:3px;margin-top:6px;}
+.heart{width:14px;height:14px;font-size:12px;transition:transform 0.2s;}
+.heart.pop{transform:scale(1.4);}
 
 /* ===== 舞台 ===== */
-.stage { position:fixed; inset:0; z-index:1; }
-
-.pet {
-  position:absolute;
-  bottom: 12%;
-  width: 42vw;
-  max-width: 260px;
-  min-width: 180px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 5;
-  filter: drop-shadow(0 12px 24px rgba(0,0,0,0.4));
-  transform-origin: center bottom;
-  will-change: transform;
-  animation: idle 3.2s ease-in-out infinite;
-}
-@keyframes idle {
-  0%,100% { transform: translateX(-50%) translateY(0) scale(1); }
-  50% { transform: translateX(-50%) translateY(-6px) scale(1.015); }
-}
+.stage{position:fixed;inset:0;z-index:1;}
 
 /* 影子 */
-.shadow {
-  position:absolute;
-  bottom: calc(12% - 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  width: 30vw;
-  max-width: 180px;
-  height: 16px;
-  background: radial-gradient(ellipse at center, rgba(0,0,0,0.4) 0%, transparent 70%);
-  filter: blur(4px);
-  z-index: 4;
-  pointer-events:none;
+.shadow{position:absolute;width:30vw;max-width:180px;height:16px;
+  background:radial-gradient(ellipse at center,rgba(0,0,0,0.45) 0%,transparent 70%);
+  filter:blur(5px);z-index:4;pointer-events:none;transition:width 0.2s,opacity 0.2s;}
+
+/* ===== 宠物（可拖拽） ===== */
+.pet-wrap{position:absolute;z-index:5;transform-origin:center bottom;will-change:transform;}
+.pet{
+  width:42vw;max-width:260px;min-width:180px;display:block;
+  filter:drop-shadow(0 8px 20px rgba(0,0,0,0.35));
+  pointer-events:auto;cursor:grab;
+  transition:filter 0.15s;
+}
+.pet:active{cursor:grabbing;}
+.pet-wrap.dragging .pet{filter:drop-shadow(0 16px 32px rgba(0,0,0,0.5)) brightness(1.05);}
+.pet-wrap.happy .pet{animation:wiggle 0.5s ease-in-out 2;}
+.pet-wrap.sleepy .pet{animation:breathe 2.5s ease-in-out infinite;}
+.pet-wrap.blink .pet{animation:blink 0.25s ease-in-out;}
+
+@keyframes wiggle{
+  0%,100%{transform:rotate(0)}
+  25%{transform:rotate(-5deg)}
+  75%{transform:rotate(5deg)}
+}
+@keyframes breathe{
+  0%,100%{transform:scale(1)}
+  50%{transform:scale(1.02)}
+}
+@keyframes blink{
+  0%,100%{filter:drop-shadow(0 8px 20px rgba(0,0,0,0.35))}
+  50%{filter:drop-shadow(0 8px 20px rgba(0,0,0,0.35)) brightness(0.9)}
+}
+
+/* 跳跃 */
+.pet-wrap.jumping{animation:jump 0.8s cubic-bezier(0.34,1.56,0.64,1);}
+@keyframes jump{
+  0%{transform:translateY(0) scale(1,1)}
+  30%{transform:translateY(-70px) scale(1.05,0.95)}
+  60%{transform:translateY(-50px) scale(0.95,1.05)}
+  100%{transform:translateY(0) scale(1,1)}
+}
+
+/* 被举高高 */
+.pet-wrap.held{animation:held 0.4s ease-out forwards;}
+@keyframes held{
+  0%{transform:translateY(0) rotate(0)}
+  50%{transform:translateY(-120px) rotate(-8deg) scale(1.1)}
+  100%{transform:translateY(0) rotate(0)}
+}
+
+/* 摇屁股 */
+.pet-wrap.shake{animation:shake 0.6s ease-in-out 3;}
+@keyframes shake{
+  0%,100%{transform:rotate(0)}
+  33%{transform:rotate(-15deg) translateY(-5px)}
+  66%{transform:rotate(15deg) translateY(-5px)}
 }
 
 /* ===== 对话气泡 ===== */
-.bubble {
-  position:fixed;
-  top: 20%;
-  left: 50%;
-  transform: translateX(-50%) translateY(-10px);
-  background: rgba(255,255,255,0.97);
-  color: #1a1f3a;
-  padding: 12px 18px;
-  border-radius: 20px;
-  border-bottom-left-radius: 6px;
-  font-size: 14px;
-  font-weight: 600;
-  max-width: 82%;
-  text-align: center;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-  z-index: 15;
-  opacity: 0;
-  transition: opacity 0.35s ease, transform 0.35s ease;
-  pointer-events: none;
-}
-.bubble.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.bubble{position:fixed;background:rgba(255,255,255,0.97);color:#1a1f3a;
+  padding:10px 16px;border-radius:18px;border-bottom-left-radius:4px;
+  font-size:14px;font-weight:600;max-width:70%;text-align:center;
+  box-shadow:0 10px 30px rgba(0,0,0,0.3);z-index:15;
+  opacity:0;transform:scale(0.6) translateY(10px);
+  transition:opacity 0.25s ease,transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  pointer-events:none;white-space:nowrap;}
+.bubble.show{opacity:1;transform:scale(1) translateY(0);}
 
-/* ===== 按钮 ===== */
-.controls {
-  position:fixed; bottom: calc(env(safe-area-inset-bottom, 0) + 20px); left:16px; right:16px; z-index:20;
-  display:grid; grid-template-columns: repeat(4, 1fr); gap:10px;
-}
-.btn {
-  background: rgba(255,255,255,0.1);
-  border: 1px solid rgba(255,255,255,0.15);
-  backdrop-filter: blur(10px);
-  border-radius: 18px;
-  padding: 14px 0;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 600;
-  text-align: center;
-  cursor: pointer;
-  transition: transform 0.15s ease, background 0.2s ease;
-}
-.btn:active { transform: scale(0.92); background: rgba(255,255,255,0.18); }
-.btn .em { font-size: 22px; display:block; margin-bottom: 3px; }
-
-/* 跳跃动画 */
-.pet.jump { animation: jump 0.7s ease-in-out; }
-@keyframes jump {
-  0%,100% { transform: translateX(-50%) translateY(0); }
-  50% { transform: translateX(-50%) translateY(-40px) scale(1.05); }
+/* 爱心粒子 */
+.particle{position:fixed;font-size:18px;pointer-events:none;z-index:30;
+  animation:floatUp 1.2s ease-out forwards;}
+@keyframes floatUp{
+  0%{opacity:1;transform:translateY(0) scale(0.5)}
+  30%{opacity:1;transform:translateY(-30px) scale(1.2)}
+  100%{opacity:0;transform:translateY(-90px) scale(0.8)}
 }
 
-/* 说话动效 */
-.pet.talking { animation: talk 0.4s ease-in-out 3; }
-@keyframes talk {
-  0%,100% { transform: translateX(-50%) translateY(0) scale(1); }
-  50% { transform: translateX(-50%) translateY(-4px) scale(1.03); }
+/* 星星粒子 */
+.star-particle{position:fixed;font-size:16px;pointer-events:none;z-index:30;
+  animation:sparkle 0.8s ease-out forwards;}
+@keyframes sparkle{
+  0%{opacity:1;transform:scale(0) rotate(0)}
+  50%{opacity:1;transform:scale(1.5) rotate(180deg)}
+  100%{opacity:0;transform:scale(0.5) rotate(360deg)}
 }
+
+/* ===== 底部操作区 ===== */
+.controls{position:fixed;bottom:calc(env(safe-area-inset-bottom,0)+16px);left:16px;right:16px;z-index:20;
+  display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.btn{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border-radius:18px;padding:12px 0;color:#fff;font-size:11px;font-weight:600;
+  text-align:center;cursor:pointer;transition:transform 0.12s ease,background 0.2s ease;}
+.btn:active{transform:scale(0.9);background:rgba(255,255,255,0.2);}
+.btn .em{font-size:22px;display:block;margin-bottom:2px;}
+
+/* 操作提示 */
+.hint{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  background:rgba(0,0,0,0.7);color:#fff;padding:12px 20px;border-radius:20px;
+  font-size:13px;z-index:100;opacity:0;pointer-events:none;
+  transition:opacity 0.3s;backdrop-filter:blur(10px);}
+.hint.show{opacity:1;}
 </style>
 </head>
 <body>
 
 <div class="status">
   <div class="name-row">
-    <div class="name">小钎猪<span class="sub"> · DYG 钎城</span></div>
+    <div class="name">小钎猪<span class="sub">· DYG 钎城</span></div>
   </div>
+  <div class="heart-bar" id="hearts"></div>
   <div class="mood" id="mood">今天也要冲冲冲～</div>
 </div>
 
-<div class="stage">
+<div class="stage" id="stage">
   <div class="stars" id="stars"></div>
-  <div class="shadow"></div>
-  <img class="pet" id="pet" src="qiancheng-character.png" alt="小钎猪">
+  <div class="ground"></div>
+  <div class="shadow" id="shadow"></div>
+  <div class="pet-wrap" id="petWrap">
+    <img class="pet" id="pet" src="qiancheng-character.png" alt="小钎猪" draggable="false">
+  </div>
 </div>
 
 <div class="bubble" id="bubble">你好呀～</div>
 
 <div class="controls">
-  <div class="btn" onclick="say()"><span class="em">🎤</span>说句话</div>
-  <div class="btn" onclick="pat()"><span class="em">🫶</span>摸摸头</div>
-  <div class="btn" onclick="play()"><span class="em">⚡</span>一起冲</div>
-  <div class="btn" onclick="sleep()"><span class="em">🌙</span>休息下</div>
+  <div class="btn" ontouchstart="say();vibrate(8)" onclick="say()"><span class="em">💬</span>说话</div>
+  <div class="btn" ontouchstart="pat();vibrate(8)" onclick="pat()"><span class="em">🫶</span>摸摸</div>
+  <div class="btn" ontouchstart="play();vibrate(15)" onclick="play()"><span class="em">⚡</span>冲鸭</div>
+  <div class="btn" ontouchstart="feed();vibrate(10)" onclick="feed()"><span class="em">🍎</span>投喂</div>
 </div>
 
+<div class="hint" id="hint"></div>
+
 <script>
+/* ========== 数据 ========== */
 const QUOTES = [
-  "我始终相信坚持可以给人力量，热爱可抵岁月漫长",
-  "圆满。拿到我想要的冠军吧",
-  "破局密码就是整个队伍团结一致",
-  "一起加油，顶峰相见",
-  "小钎猪驾到～通通闪开！",
-  "帅是一种感觉，你品品",
-  "别摸头啦，会长不高的",
+  "热爱可抵岁月漫长",
   "一波流！冲！",
-  "兄弟们，团结就是力量",
   "保持状态，冲冲冲",
+  "一起加油，顶峰相见",
+  "破局密码就是团结",
+  "圆满，拿冠军！",
+  "小钎猪驾到～通通闪开",
+  "帅是一种感觉，你品品",
+  "想我了就戳戳我",
+  "兄弟们团结就是力量",
   "今天也要元气满满",
-  "想我了就戳戳我"
+  "训练中勿扰，但你可以摸我",
 ];
-const MOODS = ["今天也要冲冲冲～","状态超好！","有点困...","饿了饿了","准备开黑！","训练中勿扰","想念钎宝们"];
+const PAT_REACT = [
+  "别摸头啦，会长不高的～",
+  "嗯...舒服～",
+  "再摸要收费了啊",
+  "好吧好吧，只准摸一下",
+  "你手好暖呀",
+];
+const FEED_REACT = [
+  "好吃！再来一个！",
+  "吃饱了才有力气打比赛",
+  "嗯～这个味道不错",
+  "谢啦，钎宝！",
+  "还想要...",
+];
+const PICKUP_REACT = [
+  "哇！飞起来啦～",
+  "放我下来！好高！",
+  "哈哈哈哈好刺激",
+  "抓紧我哦！",
+];
+const SLEEP_REACT = [
+  "zzz...晚安",
+  "困了...别吵我",
+  "让我再睡五分钟",
+];
+const MOODS = [
+  "今天也要冲冲冲～","状态超好！","有点困...",
+  "饿了饿了","准备开黑！","训练中勿扰","想念钎宝们",
+  "心情超级棒！","想被摸摸头",
+];
+
+/* ========== 状态 ========== */
+let happiness = 7;          // 心情值 0-10
+let bubbleTimer = null;
+let autoTimer = null;
+let blinkTimer = null;
+let lastTap = 0;
 
 function rand(x){ return x[Math.floor(Math.random()*x.length)] }
+function vibrate(ms){ try{ navigator.vibrate(ms); }catch(e){} }
 
-// 星空
+/* ========== 星空 ========== */
 (function(){
   const s = document.getElementById('stars');
-  for(let i=0;i<50;i++){
+  for(let i=0;i<60;i++){
     const el = document.createElement('div');
     el.className = 'star';
-    el.style.left = Math.random()*100 + '%';
-    el.style.top = Math.random()*100 + '%';
-    el.style.animationDelay = Math.random()*3 + 's';
-    el.style.width = el.style.height = (Math.random()*2+1) + 'px';
+    el.style.left = Math.random()*100+'%';
+    el.style.top = Math.random()*80+'%';
+    el.style.animationDelay = Math.random()*3+'s';
+    const sz = Math.random()*2+1;
+    el.style.width = el.style.height = sz+'px';
     s.appendChild(el);
   }
 })();
 
+/* ========== 元素引用 ========== */
+const stage = document.getElementById('stage');
+const petWrap = document.getElementById('petWrap');
 const pet = document.getElementById('pet');
 const bubble = document.getElementById('bubble');
-const mood = document.getElementById('mood');
-let bubbleTimer = null;
+const moodEl = document.getElementById('mood');
+const shadow = document.getElementById('shadow');
+const heartsEl = document.getElementById('hearts');
+const hint = document.getElementById('hint');
 
-function showBubble(text){
-  bubble.textContent = text;
-  bubble.classList.add('show');
-  clearTimeout(bubbleTimer);
-  bubbleTimer = setTimeout(()=>bubble.classList.remove('show'), 2800);
+/* ========== 宠物位置系统 ========== */
+// 基础位置（屏幕底部中间）
+let baseX = 0, baseY = 0;
+let petSize = { w: 200, h: 260 };
+let pos = { x: 0, y: 0 };    // 当前偏移
+let vel = { x: 0, y: 0 };    // 速度
+let isDragging = false;
+let dragStart = { x: 0, y: 0, posX: 0, posY: 0 };
+let scale = 1;
+
+function recalcBase(){
+  const rect = stage.getBoundingClientRect();
+  const pw = Math.min(window.innerWidth * 0.42, 260);
+  const ph = pw * 1.33;
+  petSize = { w: pw, h: ph };
+  baseX = rect.width / 2 - pw / 2;
+  baseY = rect.height * 0.88 - ph;
+  if(!isDragging){
+    pos.x = 0; pos.y = 0;
+    applyTransform();
+  }
+  // 影子
+  shadow.style.width = (pw * 0.7)+'px';
+  shadow.style.height = '14px';
+  updateShadow();
 }
 
-function anim(cls, dur=700){
-  pet.classList.add(cls);
-  setTimeout(()=>pet.classList.remove(cls), dur);
+function applyTransform(){
+  petWrap.style.left = baseX + pos.x + 'px';
+  petWrap.style.top = baseY + pos.y + 'px';
+  petWrap.style.width = petSize.w + 'px';
+}
+
+function updateShadow(){
+  const lift = Math.max(0, -pos.y);
+  shadow.style.opacity = Math.max(0.2, 0.5 - lift/400);
+  shadow.style.width = Math.max(petSize.w*0.3, petSize.w*0.7 - lift*0.5)+'px';
+}
+
+window.addEventListener('resize', recalcBase);
+window.addEventListener('orientationchange', recalcBase);
+
+/* ========== 物理回弹 ========== */
+function physicsLoop(){
+  if(!isDragging){
+    // 回弹到 base
+    const spring = 0.12;       // 弹簧力
+    const damping = 0.78;      // 阻尼
+    const grav = 0.35;         // 重力
+
+    vel.x += -pos.x * spring;
+    vel.y += -pos.y * spring + grav;  // 重力让它有下坠感
+    vel.x *= damping;
+    vel.y *= damping;
+
+    pos.x += vel.x;
+    pos.y += vel.y;
+
+    // 地面限制
+    if(pos.y > 0){ pos.y = 0; vel.y = -vel.y * 0.4; vel.x *= 0.6; }
+
+    // 边界限制
+    const maxX = window.innerWidth * 0.4;
+    if(pos.x < -maxX){ pos.x = -maxX; vel.x = 0; }
+    if(pos.x > maxX){ pos.x = maxX; vel.x = 0; }
+
+    // 速度很小时归零
+    if(Math.abs(vel.x)<0.02 && Math.abs(vel.y)<0.02 && Math.abs(pos.x)<0.5 && Math.abs(pos.y)<0.5){
+      pos.x = 0; pos.y = 0; vel.x = 0; vel.y = 0;
+    }
+
+    applyTransform();
+    updateShadow();
+  }
+  requestAnimationFrame(physicsLoop);
+}
+requestAnimationFrame(physicsLoop);
+
+/* ========== 拖拽系统 ========== */
+let lastTapTime = 0;
+let longPressTimer = null;
+let longPressTriggered = false;
+
+function getPoint(e){
+  if(e.touches && e.touches[0]) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  if(e.changedTouches && e.changedTouches[0]) return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+  return { x: e.clientX, y: e.clientY };
+}
+
+// 判断点的是头部还是身体（头部占上40%）
+function hitTestHead(localY){
+  return localY < petSize.h * 0.42;
+}
+
+function onDown(e){
+  e.preventDefault();
+  const p = getPoint(e);
+  isDragging = true;
+  longPressTriggered = false;
+  dragStart = { x: p.x, y: p.y, posX: pos.x, posY: pos.y };
+  petWrap.classList.add('dragging');
+
+  // 长按检测
+  clearTimeout(longPressTimer);
+  longPressTimer = setTimeout(()=>{
+    longPressTriggered = true;
+    isDragging = false;
+    petWrap.classList.remove('dragging');
+    pickup();
+  }, 550);
+}
+
+function onMove(e){
+  if(!isDragging) return;
+  e.preventDefault();
+  const p = getPoint(e);
+  const dx = p.x - dragStart.x;
+  const dy = p.y - dragStart.y;
+
+  pos.x = dragStart.posX + dx;
+  pos.y = dragStart.posY + dy;
+  vel.x = dx * 0.1;
+  vel.y = dy * 0.1;
+
+  // 拖拽时触发震动
+  vibrate(3);
+
+  applyTransform();
+  updateShadow();
+}
+
+function onUp(e){
+  if(longPressTriggered) return;
+  clearTimeout(longPressTimer);
+
+  if(!isDragging){
+    // 点击判定（不是拖拽）
+    const now = Date.now();
+    const p = getPoint(e);
+    const localX = p.x - baseX - pos.x;
+    const localY = p.y - baseY - pos.y;
+
+    // 双击 → 跳跃
+    if(now - lastTapTime < 300){
+      jump();
+      lastTapTime = 0;
+      return;
+    }
+    lastTapTime = now;
+
+    // 点击部位
+    if(hitTestHead(localY)){
+      // 摸头
+      pat();
+    } else {
+      // 戳身体
+      say();
+    }
+    return;
+  }
+
+  isDragging = false;
+  petWrap.classList.remove('dragging');
+
+  // 松手时给一个初速度（惯性）
+  const p = getPoint(e);
+  vel.x = (p.x - dragStart.x) * 0.03;
+  vel.y = (p.y - dragStart.y) * 0.03;
+
+  // 如果扔得够快，加个震动反馈
+  if(Math.abs(vel.x) > 3 || Math.abs(vel.y) > 3) vibrate(12);
+
+  // 延迟双击检测重置
+  setTimeout(()=>{ lastTapTime = 0; }, 300);
+}
+
+// 绑定事件
+pet.addEventListener('touchstart', onDown, {passive:false});
+pet.addEventListener('touchmove', onMove, {passive:false});
+pet.addEventListener('touchend', onUp, {passive:false});
+pet.addEventListener('touchcancel', onUp, {passive:false});
+pet.addEventListener('mousedown', onDown);
+window.addEventListener('mousemove', onMove);
+window.addEventListener('mouseup', onUp);
+
+/* ========== 互动动作 ========== */
+function showBubble(text){
+  bubble.textContent = text;
+  // 定位气泡在宠物上方
+  const petRect = petWrap.getBoundingClientRect();
+  const bW = Math.min(petSize.w * 1.4, 260);
+  bubble.style.maxWidth = bW+'px';
+  // 先显示再定位
+  bubble.classList.add('show');
+  requestAnimationFrame(()=>{
+    const bRect = bubble.getBoundingClientRect();
+    let left = petRect.left + petRect.width/2 - bRect.width/2;
+    left = Math.max(10, Math.min(window.innerWidth - bRect.width - 10, left));
+    bubble.style.left = left + 'px';
+    bubble.style.top = Math.max(80, petRect.top - bRect.height - 14) + 'px';
+  });
+  clearTimeout(bubbleTimer);
+  bubbleTimer = setTimeout(()=>bubble.classList.remove('show'), 2600);
+}
+
+function clearAnim(cls){
+  setTimeout(()=>petWrap.classList.remove(cls), 900);
 }
 
 function say(){
-  showBubble(rand(QUOTES));
-  anim('talking', 500);
-  speak(rand(QUOTES));
+  const text = rand(QUOTES);
+  showBubble(text);
+  petWrap.classList.add('happy');
+  clearAnim('happy');
+  speak(text);
+  addHappiness(1);
+  vibrate(10);
+  spawnParticles(3, '✨');
 }
+
 function pat(){
-  showBubble("别摸头啦，会长不高的～");
-  anim('talking', 400);
-  speak("别摸头啦");
+  const text = rand(PAT_REACT);
+  showBubble(text);
+  petWrap.classList.add('happy');
+  clearAnim('happy');
+  speak(text);
+  addHappiness(1);
+  vibrate(12);
+  spawnParticles(3, '💖');
 }
+
 function play(){
   showBubble("一波流！冲！");
-  anim('jump', 700);
+  jump();
   speak("一波流冲");
-}
-function sleep(){
-  showBubble("z z z 晚安 💤");
-  speak("晚安");
+  addHappiness(2);
+  vibrate(20);
+  spawnParticles(5, '⚡');
 }
 
+function feed(){
+  const text = rand(FEED_REACT);
+  showBubble(text);
+  petWrap.classList.add('happy');
+  clearAnim('happy');
+  speak(text);
+  addHappiness(2);
+  vibrate(15);
+  spawnParticles(4, '🍎');
+}
+
+function jump(){
+  if(isDragging) return;
+  petWrap.classList.remove('jumping');
+  void petWrap.offsetWidth;  // reflow
+  petWrap.classList.add('jumping');
+  setTimeout(()=>petWrap.classList.remove('jumping'), 800);
+  vibrate(15);
+  spawnParticles(3, '⭐');
+}
+
+function pickup(){
+  // 举高高
+  showBubble(rand(PICKUP_REACT));
+  petWrap.classList.add('held');
+  speak("哇飞起来啦");
+  vibrate([20,30,20]);
+  spawnParticles(5, '💫');
+  setTimeout(()=>petWrap.classList.remove('held'), 600);
+  addHappiness(3);
+}
+
+function shake(){
+  petWrap.classList.add('shake');
+  clearAnim('shake');
+  spawnParticles(4, '✨');
+}
+
+/* ========== 粒子系统 ========== */
+function spawnParticles(n, emoji){
+  const petRect = petWrap.getBoundingClientRect();
+  for(let i=0;i<n;i++){
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.textContent = emoji;
+    p.style.left = (petRect.left + petRect.width/2 + (Math.random()-0.5)*60) + 'px';
+    p.style.top = (petRect.top + petRect.height*0.3 + (Math.random()-0.5)*30) + 'px';
+    p.style.animationDelay = (Math.random()*0.15)+'s';
+    document.body.appendChild(p);
+    setTimeout(()=>p.remove(), 1400);
+  }
+}
+
+function spawnStars(n){
+  const petRect = petWrap.getBoundingClientRect();
+  for(let i=0;i<n;i++){
+    const p = document.createElement('div');
+    p.className = 'star-particle';
+    p.textContent = '⭐';
+    p.style.left = (petRect.left + Math.random()*petRect.width) + 'px';
+    p.style.top = (petRect.top + Math.random()*petRect.height*0.6) + 'px';
+    document.body.appendChild(p);
+    setTimeout(()=>p.remove(), 900);
+  }
+}
+
+/* ========== 心情系统 ========== */
+function addHappiness(delta){
+  const old = happiness;
+  happiness = Math.max(0, Math.min(10, happiness + delta));
+  if(happiness > old){
+    heartsEl.innerHTML = '';
+    for(let i=0;i<10;i++){
+      const h = document.createElement('span');
+      h.className = 'heart'+(i < happiness ? ' pop' : '');
+      h.textContent = i < happiness ? '💖' : '🤍';
+      heartsEl.appendChild(h);
+    }
+    setTimeout(()=>{
+      heartsEl.querySelectorAll('.heart').forEach(h=>h.classList.remove('pop'));
+    }, 300);
+  }
+  saveState();
+  updateMood();
+}
+
+function updateMood(){
+  let moodText = rand(MOODS);
+  if(happiness >= 8) moodText = "心情超级棒！想被摸摸～";
+  else if(happiness >= 5) moodText = "状态在线，冲冲冲";
+  else if(happiness <= 2) moodText = "有点...不开心";
+  else moodText = "还行还行";
+  moodEl.style.opacity = 0;
+  setTimeout(()=>{
+    moodEl.textContent = moodText;
+    moodEl.style.opacity = 1;
+  }, 250);
+}
+
+/* ========== 自动小动作 ========== */
+function autoAction(){
+  if(isDragging || bubble.classList.contains('show')) return;
+  const r = Math.random();
+  if(r < 0.25){
+    // 自己说句话
+    showBubble(rand(QUOTES));
+    petWrap.classList.add('happy');
+    clearAnim('happy');
+    speak(rand(QUOTES));
+  } else if(r < 0.5){
+    // 抖一下
+    shake();
+  } else if(r < 0.7){
+    // 小声说
+    const whispers = ["...","嘿嘿","嘻嘻","Zzz","呼..."];
+    showBubble(rand(whispers));
+  }
+}
+
+function blink(){
+  petWrap.classList.add('blink');
+  setTimeout(()=>petWrap.classList.remove('blink'), 250);
+}
+
+/* ========== 语音 ========== */
 function speak(text){
-  if(!'speechSynthesis' in window) return;
-  try {
+  if(!window.speechSynthesis) return;
+  try{
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'zh-CN'; u.rate = 1.05; u.pitch = 1.05;
+    u.lang = 'zh-CN';
+    u.rate = 1.1;
+    u.pitch = 1.1;
+    u.volume = 0.9;
     window.speechSynthesis.speak(u);
-  } catch(e){}
+  }catch(e){}
 }
 
-// 页面加载说一句
-window.addEventListener('load', ()=>{
-  setTimeout(()=>showBubble(rand(QUOTES)), 400);
-});
+/* ========== 持久化 ========== */
+function saveState(){
+  try{ localStorage.setItem('pigPet', JSON.stringify({ happiness })); }catch(e){}
+}
+function loadState(){
+  try{
+    const s = JSON.parse(localStorage.getItem('pigPet') || 'null');
+    if(s && typeof s.happiness === 'number') happiness = s.happiness;
+  }catch(e){}
+}
 
-// 定时换心情
-setInterval(()=>{ mood.textContent = rand(MOODS); }, 15000);
+/* ========== 初始化 ========== */
+function init(){
+  loadState();
+  recalcBase();
+  addHappiness(0);  // 渲染 hearts
+  updateMood();
 
-// 点击宠物也能说话
-pet.addEventListener('click', (e)=>{ e.stopPropagation(); say(); });
+  // 定时事件
+  setTimeout(()=>showBubble("钎宝你好呀～点我玩！"), 500);
+
+  // 自动小动作：每 8-20 秒一次
+  autoTimer = setInterval(()=>{
+    if(Math.random() < 0.6) autoAction();
+  }, 8000);
+
+  // 自动眨眼：每 3-7 秒
+  blinkTimer = setInterval(()=>{
+    if(Math.random() < 0.4 && !isDragging) blink();
+  }, 4000);
+
+  // 心情缓慢下降
+  setInterval(()=>{
+    if(happiness > 0 && Math.random() < 0.3){
+      happiness--;
+      addHappiness(0);
+    }
+  }, 30000);
+
+  // 欢迎提示
+  setTimeout(()=>{
+    showHint("👆 拖我玩  |  戳头摸我  |  双击跳  |  长按举高高");
+  }, 1200);
+}
+
+function showHint(text){
+  hint.textContent = text;
+  hint.classList.add('show');
+  setTimeout(()=>hint.classList.remove('show'), 3500);
+}
+
+window.addEventListener('load', init);
 </script>
 </body>
 </html>
