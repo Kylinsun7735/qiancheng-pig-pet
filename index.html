@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>小钎猪 · 钎城桌宠</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.svg">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { height:100%; overflow:hidden; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: linear-gradient(180deg, #0f1221 0%, #1a1f3a 50%, #0d1030 100%);
+    color: #fff;
+    display: flex; flex-direction: column;
+  }
+
+  /* 状态栏 */
+  .status-bar {
+    margin: 16px 16px 0;
+    padding: 14px 18px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 22px;
+    backdrop-filter: blur(12px);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .name-tag { font-size: 18px; font-weight: 800; }
+  .name-tag .sub { font-size: 12px; opacity: 0.6; font-weight: 500; margin-left: 4px; }
+  .mood-text { font-size: 11px; opacity: 0.7; margin-top: 4px; }
+  .stats { display: flex; gap: 14px; }
+  .stat { text-align: center; }
+  .stat-label { font-size: 9px; opacity: 0.5; margin-bottom: 3px; }
+  .stat-bar { width: 32px; height: 4px; background: rgba(255,255,255,0.12); border-radius: 2px; overflow: hidden; }
+  .stat-fill { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
+  .stat-fill.happy { background: #fbbf24; }
+  .stat-fill.energy { background: #60a5fa; }
+  .stat-fill.full { background: #4ade80; }
+
+  /* 舞台 */
+  .stage {
+    flex: 1; position: relative; overflow: hidden;
+    display: flex; align-items: flex-end; justify-content: center;
+    padding-bottom: 20px;
+  }
+  .stars {
+    position: absolute; inset: 0; pointer-events: none;
+  }
+  .star {
+    position: absolute; width: 2px; height: 2px; background: rgba(255,255,255,0.8); border-radius: 50%;
+    animation: twinkle 3s ease-in-out infinite;
+  }
+  @keyframes twinkle { 0%,100%{opacity:0.2} 50%{opacity:1} }
+
+  .pet-wrapper {
+    position: relative; width: 260px; height: 340px;
+    display: flex; justify-content: center; align-items: flex-end;
+    z-index: 2;
+  }
+  .pet-img {
+    width: 240px; height: 240px; object-fit: contain;
+    image-rendering: pixelated;
+    transform-origin: center bottom;
+  }
+
+  /* 动画 */
+  .anim-idle .pet-img { animation: breathe 3s ease-in-out infinite, sway 5s ease-in-out infinite; }
+  .anim-pat .pet-img { animation: pat 0.5s ease-in-out 2; }
+  .anim-play .pet-img { animation: jump 0.7s ease-in-out infinite; filter: drop-shadow(0 0 12px rgba(251,191,36,0.5)); }
+  .anim-sleep .pet-img { animation: sleep 4s ease-in-out infinite; filter: brightness(0.85); }
+  .anim-quote .pet-img { animation: speak 0.5s ease-in-out infinite; }
+
+  @keyframes breathe { 0%,100%{transform:scale(1)} 50%{transform:scale(1.02)} }
+  @keyframes sway { 0%,100%{transform:rotate(-1deg)} 50%{transform:rotate(1deg)} }
+  @keyframes pat { 0%,100%{transform:scale(1)} 50%{transform:scale(0.92) rotate(-2deg)} }
+  @keyframes jump { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-28px) scale(1.05)} }
+  @keyframes sleep { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+  @keyframes speak { 0%,100%{transform:scale(1)} 50%{transform:scale(1.04)} }
+
+  /* 地面影子 */
+  .shadow {
+    position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
+    width: 140px; height: 18px; background: rgba(0,0,0,0.25); border-radius: 50%;
+    filter: blur(6px); z-index: 1;
+  }
+
+  /* 对话气泡 */
+  .bubble-wrap {
+    position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+    z-index: 10; pointer-events: none;
+  }
+  .bubble {
+    background: rgba(255,255,255,0.95); color: #1a1f3a;
+    padding: 10px 16px; border-radius: 18px; border-bottom-left-radius: 4px;
+    font-size: 13px; font-weight: 600; white-space: nowrap;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+    animation: bubbleIn 0.3s ease-out;
+  }
+  @keyframes bubbleIn { from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:translateY(0)} }
+
+  /* Zzz */
+  .zzz-box {
+    position: absolute; top: 10px; right: 20px; z-index: 5;
+    display: none; pointer-events: none;
+  }
+  .anim-sleep .zzz-box { display: block; }
+  .zzz {
+    position: absolute; font-size: 20px; font-weight: bold; color: #a78bfa;
+    animation: zzz 2.5s linear infinite;
+  }
+  .zzz:nth-child(1) { animation-delay: 0s; }
+  .zzz:nth-child(2) { animation-delay: 0.8s; }
+  .zzz:nth-child(3) { animation-delay: 1.6s; }
+  @keyframes zzz { 0%{opacity:0; transform:translate(0,0) scale(0.6)} 30%{opacity:1} 100%{opacity:0; transform:translate(18px,-36px) scale(1.1)} }
+
+  /* 控制按钮 */
+  .controls {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+    padding: 0 16px 28px;
+  }
+  .btn {
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 18px; padding: 12px 0; color: #fff;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    transition: transform 0.15s ease, background 0.2s ease;
+  }
+  .btn:active { transform: scale(0.92); background: rgba(255,255,255,0.18); }
+  .btn .icon { font-size: 22px; }
+
+  .tip { position: fixed; bottom: 4px; left: 50%; transform: translateX(-50%); font-size: 9px; opacity: 0.25; }
+</style>
+</head>
+<body>
+
+<div class="status-bar">
+  <div>
+    <div class="name-tag">小钎猪 <span class="sub">· DYG 钎城</span></div>
+    <div class="mood-text" id="moodText">今天也要冲冲冲～</div>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="stat-label">心情</div><div class="stat-bar"><div class="stat-fill happy" id="happyBar" style="width:80%"></div></div></div>
+    <div class="stat"><div class="stat-label">体力</div><div class="stat-bar"><div class="stat-fill full" id="fullBar" style="width:70%"></div></div></div>
+    <div class="stat"><div class="stat-label">精神</div><div class="stat-bar"><div class="stat-fill energy" id="energyBar" style="width:85%"></div></div></div>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="stars" id="starsLayer"></div>
+  <div class="shadow"></div>
+  <div class="pet-wrapper anim-idle" id="petWrapper">
+    <div class="bubble-wrap" id="bubbleWrap"></div>
+    <div class="zzz-box">
+      <div class="zzz">z</div><div class="zzz">z</div><div class="zzz">z</div>
+    </div>
+    <img class="pet-img" id="petImg" src="qiancheng-main.png?v=1" alt="小钎猪">
+  </div>
+</div>
+
+<div class="controls">
+  <button class="btn" onclick="petAction('quote')"><span class="icon">🔊</span><span>说句话</span></button>
+  <button class="btn" onclick="petAction('pat')"><span class="icon">💗</span><span>摸摸头</span></button>
+  <button class="btn" onclick="petAction('play')"><span class="icon">⚡</span><span>一起冲</span></button>
+  <button class="btn" onclick="petAction('sleep')"><span class="icon">🌙</span><span>休息下</span></button>
+</div>
+
+<div class="tip">© 钎城周诣涛 · 粉丝桌宠</div>
+
+<script>
+const quotes = [
+  "我始终相信坚持可以给人力量，热爱可抵岁月漫长",
+  "圆满。拿到我想要的冠军吧",
+  "破局密码就是整个队伍团结一致",
+  "一起加油，顶峰相见",
+  "小钎猪驾到～通通闪开！",
+  "帅是一种感觉，你品品",
+  "别摸头啦，会长不高的",
+  "一波流！冲！",
+  "兄弟们，团结就是力量",
+  "保持状态，冲冲冲 🎯",
+  "今天也要元气满满",
+  "想我了就戳戳我"
+];
+
+const state = {
+  happy: 80, full: 70, energy: 85,
+  isSleeping: false,
+  animTimer: 0, speaking: false
+};
+try {
+  const saved = JSON.parse(localStorage.getItem('qianchengPetV3') || 'null');
+  if (saved) { Object.assign(state, saved); state.isSleeping = false; }
+} catch(e){}
+
+function saveState() {
+  try { localStorage.setItem('qianchengPetV3', JSON.stringify(state)); } catch(e){}
+}
+
+function updateBars() {
+  document.getElementById('happyBar').style.width = state.happy + '%';
+  document.getElementById('fullBar').style.width = state.full + '%';
+  document.getElementById('energyBar').style.width = state.energy + '%';
+  const moods = [
+    {t:"今天状态超好，一起冲！", h:70, f:70, e:70},
+    {t:"有点饿了，喂点信心吧", f:40},
+    {t:"困困的，休息一下吧", e:40},
+    {t:"今天状态一般，需要加油", h:40}
+  ];
+  const m = moods.find(x => {
+    if (x.h && state.happy < x.h) return true;
+    if (x.f && state.full < x.f) return true;
+    if (x.e && state.energy < x.e) return true;
+    return false;
+  });
+  document.getElementById('moodText').textContent = m ? m.t : "今天也要冲冲冲～";
+}
+
+function setAnim(name) {
+  const wrapper = document.getElementById('petWrapper');
+  wrapper.className = 'pet-wrapper anim-' + name;
+  if (state.animTimer) clearTimeout(state.animTimer);
+  if (name !== 'idle' && name !== 'sleep') {
+    state.animTimer = setTimeout(() => {
+      if (!state.isSleeping) wrapper.className = 'pet-wrapper anim-idle';
+    }, 2500);
+  }
+}
+
+function showBubble(text) {
+  const box = document.getElementById('bubbleWrap');
+  box.innerHTML = '<div class="bubble">' + text + '</div>';
+  setTimeout(() => { box.innerHTML = ''; }, 2600);
+}
+
+function speak(text) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'zh-CN'; u.rate = 1.05; u.pitch = 1.05;
+  const voices = window.speechSynthesis.getVoices();
+  const cn = voices.find(v => v.lang.includes('zh') && v.name.includes('Male')) || voices.find(v => v.lang.includes('zh'));
+  if (cn) u.voice = cn;
+  window.speechSynthesis.speak(u);
+}
+
+function petAction(type) {
+  if (state.isSleeping && type !== 'sleep') {
+    state.isSleeping = false;
+    setAnim('idle');
+  }
+  if (type === 'quote') {
+    const q = quotes[Math.floor(Math.random() * quotes.length)];
+    showBubble(q); speak(q); setAnim('quote');
+    state.happy = Math.min(100, state.happy + 5);
+  } else if (type === 'pat') {
+    showBubble("别摸头啦，会长不高的～"); speak("别摸头啦"); setAnim('pat');
+    state.happy = Math.min(100, state.happy + 8);
+  } else if (type === 'play') {
+    showBubble("一波流！冲！"); speak("一波流冲"); setAnim('play');
+    state.happy = Math.min(100, state.happy + 10);
+    state.energy = Math.max(0, state.energy - 8);
+    state.full = Math.max(0, state.full - 5);
+  } else if (type === 'sleep') {
+    state.isSleeping = !state.isSleeping;
+    if (state.isSleeping) {
+      showBubble("z z z 晚安"); speak("晚安"); setAnim('sleep');
+    } else {
+      showBubble("起床啦！"); speak("起床啦"); setAnim('idle');
+    }
+  }
+  updateBars(); saveState();
+}
+
+// 自然衰减
+setInterval(() => {
+  if (!state.isSleeping) {
+    state.happy = Math.max(0, state.happy - 1);
+    state.full = Math.max(0, state.full - 1);
+    state.energy = Math.max(0, state.energy - 0.5);
+  } else {
+    state.energy = Math.min(100, state.energy + 2);
+    state.full = Math.max(0, state.full - 0.5);
+  }
+  updateBars(); saveState();
+}, 4000);
+
+// 星空
+function createStars() {
+  const layer = document.getElementById('starsLayer');
+  for (let i = 0; i < 40; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    s.style.left = Math.random() * 100 + '%';
+    s.style.top = Math.random() * 100 + '%';
+    s.style.animationDelay = Math.random() * 3 + 's';
+    layer.appendChild(s);
+  }
+}
+
+createStars();
+updateBars();
+setAnim('idle');
+</script>
+</body>
+</html>
